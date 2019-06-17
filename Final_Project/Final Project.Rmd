@@ -1,0 +1,147 @@
+---
+title: "Final Report"
+author: "Tianzuo Huang"
+date: "6/16/2019"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+install.packages("purrr",repos = "http://cran.us.r-project.org")
+install.packages("corrplot",repos = "http://cran.us.r-project.org")
+install.packages("dplyr",repos = "http://cran.us.r-project.org")
+install.packages("factoextra", repos = "http://cran.us.r-project.org")
+library(factoextra)
+library(corrplot)
+library(purrr)
+library(dplyr)
+setwd("~/Documents/Study/HU/Courses/EDA/Exploratory_Data_Analysis/Final_Project")
+gapminder <- read.csv("gapminder.csv")
+```
+
+```{r Question Setup}
+# Question 1: Which region's income has the highest correlation to its life expectancy?
+# Question 2: How does the life expectancy change year by year for China and US? Is there any abnormal trend?
+# Question 3: How many clusters is optimal for this dataset? What are the descriptive statistics for each cluster?
+```
+
+```{r Data Description}
+str(gapminder)
+# The population data needs to be cleaned by removing the commas.
+gapminder$population <- as.numeric(gsub(",", "", gapminder$population))
+summary(gapminder)
+head(gapminder)
+# Noticed some NAs in column population. How about other columns?
+colSums(is.na(gapminder))
+# Check which column has NA
+gapminder <- gapminder[!is.na(gapminder$income), ]
+# Only remove NAs in column income because NAs in population can be explained - census data collected about every 10 years
+length(unique(gapminder$Country))
+```
+### We know that there are 183 unique countries and 6 regions in this dataset. The date range is between 1800 and 2015. 
+
+```{r Data Exploration}
+# Check the observations for each state
+table(gapminder$region)
+# Check the overall life expectancy and the median life expectancy divided by the region
+hist(gapminder$life)
+gapminder_life <- aggregate(life ~ region, gapminder, median)
+print(gapminder_life)
+# Check the overall income and the median income divided by the region
+hist(gapminder$income)
+gapminder_income <- aggregate(income ~ region, gapminder, median)
+print(gapminder_income)
+
+
+gapminder_corr <- na.omit(gapminder[, c(2, 3, 4, 5)])
+corrmatrix = cor(gapminder_corr, method = "pearson")
+corrplot(corrmatrix, method = "number")
+# We didn't see a strong correlation between overall income and life expectancy. Is that still the truth if we look at the correlation by each region?
+
+income_America <- gapminder$income[gapminder$region == "America"]
+life_America <- gapminder$life[gapminder$region == "America"]
+cor(income_America, life_America)
+
+income_East_Asia <- gapminder$income[gapminder$region == "East Asia & Pacific"]
+life_East_Asia <- gapminder$life[gapminder$region == "East Asia & Pacific"]
+cor(income_East_Asia, life_East_Asia)
+
+income_Europe <- gapminder$income[gapminder$region == "Europe & Central Asia"]
+life_Europe  <- gapminder$life[gapminder$region == "Europe & Central Asia"]
+cor(income_Europe, life_Europe)
+
+income_Middle_East <- gapminder$income[gapminder$region == "Middle East & North Africa"]
+life_Middle_East <- gapminder$life[gapminder$region == "Middle East & North Africa"]
+cor(income_Middle_East, life_Middle_East)
+
+income_South_Asia <- gapminder$income[gapminder$region == "South Asia"]
+life_South_Asia <- gapminder$life[gapminder$region == "South Asia"]
+cor(income_South_Asia, life_South_Asia)
+
+income_Africa <- gapminder$income[gapminder$region == "Sub-Saharan Africa"]
+life_Africa <- gapminder$life[gapminder$region == "Sub-Saharan Africa"]
+cor(income_Africa, life_Africa)
+```
+### In Europe & Central Asia and America, the correlation between income and life expectancy is higher than it is in other regions while in Sub-Saharan Africa the correlation is the lowest. 
+### In other words, even though one person has a high income in Sub-Saharan Africa, he or she might NOT have a long life expectancy. 
+
+```{r Data Visualization}
+plot(gapminder[, 3:5])
+## Didn't get too much valuable information. I need to pick up a specific region or country
+plot(life ~ Year, gapminder, subset = Country == "United States",type = "l", col = "Blue", main = "Life Expectancy and Year for U.S. & China", ylim = c(30, 80))
+axis(1, seq(1800, 2000, 10))
+axis(2, seq(30, 70, 10))
+
+par(new=TRUE)
+plot(life ~ Year, gapminder, subset = Country == "China" ,type = "l", col = "Red", ylim = c(30, 80))
+axis(1, seq(1800, 2000, 10))
+axis(2, seq(30, 70, 10))
+legend(1, 95, legend=c("China", "U.S."),
+       col=c("red", "blue"))
+# We noticed that China experienced a big drop in life expectancy around 1960. Did this situation happen to other countries in East Asia & Pacific as well? 
+gapminder_asia <- gapminder[gapminder$region == "East Asia & Pacific" & !gapminder$Country == "China",]
+Asia_year <- c(min(gapminder_asia$Year):max(gapminder_asia$Year))
+Asia_life = Asia_year
+for (i in c(1:length(Asia_year))){
+  tmp = gapminder_asia[gapminder_asia$Year == Asia_year[i],3]
+  Asia_life[i]= mean(tmp)
+}
+plot(Asia_year, Asia_life, type ="l", main = "Life Expectancy and Year in Asia (China Excluded)")
+```
+### From the plot above, we didn't see a similar drop for other countries in East Asia & Pacific. The drop of life expectancy in China around 1960 might be caused by a combination of social, economy, regulations and natural disasters.
+
+```{r Cluster Analysis}
+gapminder_cluster <- na.omit(gapminder[, c(3, 4, 5)])
+gapminder_cluster_scale <- scale(gapminder_cluster)
+wss <- function(k){
+  kmeans(gapminder_cluster_scale, k, nstart = 10)$tot.withinss
+}
+k.values <- 1:15
+wss_values <- map_dbl(k.values, wss)
+plot(k.values, wss_values, type = "b", pch = 19, frame = FALSE, xlab = "Number of clusters K", ylab = "Total wihin-clusters")
+# With the ELbow method, it suggests 4 as the number of optimal clusters. We can perform the final analysis now. 
+final <- kmeans(gapminder_cluster_scale, 4, nstart = 25)
+fviz_cluster(final, data = gapminder_cluster_scale)
+# Visualize the results by using fviz_cluster
+gapminder_cluster %>%
+  mutate(Cluster = final$cluster) %>%
+  group_by(Cluster) %>%
+  summarise_all("mean")
+# We can extract the clusters and add to our initial data to do some descriptive statistics at the cluster level
+```
+### With the ELbow method, it suggests 4 as the number of optimal clusters.
+### From the statistics above, we can see that the 2nd cluster has the largest popution. The 4th cluster has the highest income. 
+
+```{r References}
+# Quick R: Cluster Analysis
+# https://www.statmethods.net/advstats/cluster.html
+# UC Business Analytics R Programming Guide: Dealing with Missing Values
+# http://uc-r.github.io/missing_values
+# UC Business Analytics R Programming Guide: K-means Cluster Analysis
+# https://uc-r.github.io/kmeans_clustering
+# Great Chinese Famine
+# https://en.wikipedia.org/wiki/Great_Chinese_Famine
+```
+
+
