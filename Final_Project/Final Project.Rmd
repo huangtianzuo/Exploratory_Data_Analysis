@@ -3,6 +3,7 @@ title: "Final Report"
 author: "Tianzuo Huang"
 date: "6/16/2019"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -83,8 +84,6 @@ income_Africa <- gapminder$income[gapminder$region == "Sub-Saharan Africa"]
 life_Africa <- gapminder$life[gapminder$region == "Sub-Saharan Africa"]
 cor(income_Africa, life_Africa)
 ```
-### In Europe & Central Asia and America, the correlation between income and life expectancy is higher than it is in other regions while in Sub-Saharan Africa the correlation is the lowest. 
-### In other words, even though one person has a high income in Sub-Saharan Africa, he or she might NOT have a long life expectancy. 
 
 ```{r Data Visualization}
 plot(gapminder[, 3:5])
@@ -92,13 +91,13 @@ plot(gapminder[, 3:5])
 plot(life ~ Year, gapminder, subset = Country == "United States",type = "l", col = "Blue", main = "Life Expectancy and Year for U.S. & China", ylim = c(30, 80))
 axis(1, seq(1800, 2000, 10))
 axis(2, seq(30, 70, 10))
-
 par(new=TRUE)
 plot(life ~ Year, gapminder, subset = Country == "China" ,type = "l", col = "Red", ylim = c(30, 80))
 axis(1, seq(1800, 2000, 10))
 axis(2, seq(30, 70, 10))
-legend(1, 95, legend=c("China", "U.S."),
-       col=c("red", "blue"))
+legend(1800, 70, legend=c("China", "U.S."),
+       col=c("red", "blue"), lty=1:2, cex=0.8,
+       title="Line types", text.font=4, bg='lightblue')
 # We noticed that China experienced a big drop in life expectancy around 1960. Did this situation happen to other countries in East Asia & Pacific as well? 
 gapminder_asia <- gapminder[gapminder$region == "East Asia & Pacific" & !gapminder$Country == "China",]
 Asia_year <- c(min(gapminder_asia$Year):max(gapminder_asia$Year))
@@ -109,7 +108,6 @@ for (i in c(1:length(Asia_year))){
 }
 plot(Asia_year, Asia_life, type ="l", main = "Life Expectancy and Year in Asia (China Excluded)")
 ```
-### From the plot above, we didn't see a similar drop for other countries in East Asia & Pacific. The drop of life expectancy in China around 1960 might be caused by a combination of social, economy, regulations and natural disasters.
 
 ```{r Cluster Analysis}
 gapminder_cluster <- na.omit(gapminder[, c(3, 4, 5)])
@@ -132,6 +130,11 @@ gapminder_cluster %>%
 ```
 ### With the ELbow method, it suggests 4 as the number of optimal clusters.
 ### From the statistics above, we can see that the 2nd cluster has the largest popution. The 4th cluster has the highest income. 
+
+```{r Summary}
+### In Europe & Central Asia and America, the correlation between income and life expectancy is higher than it is in other regions while in Sub-Saharan Africa the correlation is the lowest. In other words, even though one person has a high income in Sub-Saharan Africa, he or she might NOT have a long life expectancy. 
+### For the second question, since we didn't see a similar drop for other countries in East Asia & Pacific, we can conclude that the drop of life expectancy in China around 1960 might be caused by a combination of social, economy, regulations and natural disasters.
+```
 
 ```{r References}
 # Quick R: Cluster Analysis
